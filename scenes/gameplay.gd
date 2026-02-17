@@ -26,8 +26,7 @@ func _ready():
 	
 	# Connect signals
 	gold_manager.gold_changed.connect(_on_gold_changed)
-	deployment_ui.mini_selected.connect(_on_mini_selected)
-	deployment_ui.mini_deselected.connect(_on_mini_deselected)
+	deployment_ui.mini_dropped.connect(_on_mini_dropped)
 	
 	# Add bases to groups
 	enemy_base.add_to_group("bases")
@@ -40,9 +39,6 @@ func _ready():
 	
 	# Initial gold display
 	_on_gold_changed(gold_manager.gold)
-	
-	# Connect tap area for input
-	$TapArea.gui_input.connect(_on_tap_area_input)
 	
 	print("GameManager ready!")
 	print("Viewport size: ", get_viewport().get_visible_rect().size)
@@ -62,77 +58,37 @@ func _process(delta):
 		end_game(ENEMY_TEAM)
 		return
 
-func _input(event):
-	# For HTML5, mouse and touch are often merged
-	# Check for any press event
-	if event is InputEventMouseButton or event is InputEventScreenTouch:
-		var is_pressed = false
-		var pos = Vector2.ZERO
-		
-		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				is_pressed = event.pressed
-				pos = event.position
-		elif event is InputEventScreenTouch:
-			is_pressed = event.pressed
-			pos = event.position
-		
-		if is_pressed and pos != Vector2.ZERO:
-			print("Input event at: ", pos)
-			_handle_tap(pos)
+func _on_gold_changed(amount):
+	gold_display.text = "Gold: %d" % amount
 
-func _on_tap_area_input(event):
-	# Alternative input via gui_input on Control node
-	print("TapArea received: ", event)
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			print("TapArea mouse click: ", event.position)
-			_handle_tap(event.position)
-	elif event is InputEventScreenTouch:
-		if event.pressed:
-			print("TapArea touch: ", event.position)
-			_handle_tap(event.position)
-
-func _handle_tap(screen_pos: Vector2):
-	print("Handle tap at: ", screen_pos, " selected: ", selected_mini_data)
+func _on_mini_dropped(mini_data: Dictionary, drop_pos: Vector2):
+	print("Mini dropped: ", mini_data, " at ", drop_pos)
 	
-	if selected_mini_data.is_empty():
-		print("No mini selected")
+	if mini_data.is_empty():
 		return
 	
-	var cost = selected_mini_data.get("cost", 3)
-	print("Cost: ", cost, " gold: ", gold_manager.gold)
+	var cost = mini_data.get("cost", 3)
 	
 	if gold_manager.spend(cost):
-		# Determine lane from tap position
-		var lane = int(screen_pos.x / 160)
+		# Determine lane from drop position
+		var lane = int(drop_pos.x / 160)
 		lane = clamp(lane, 0, 2)
 		
-		# Spawn mini at tap position
-		spawn_mini(selected_mini_data, screen_pos, lane, PLAYER_TEAM)
+		# Spawn mini at drop position
+		spawn_mini(mini_data, drop_pos, lane, PLAYER_TEAM)
 		
-		# Clear selection
-		selected_mini_data.clear()
+		# Update gold
 		_on_gold_changed(gold_manager.gold)
 		
-		# Clear UI selection
-		deployment_ui.clear_selection()
+		# Show feedback
+		gold_display.text = "Deployed %s!" % mini_data.get("name", "Unit")
+		await get_tree().create_timer(0.5).timeout
+		_on_gold_changed(gold_manager.gold)
 	else:
 		# Not enough gold
 		gold_display.text = "Need $%d more!" % (cost - gold_manager.gold)
 		await get_tree().create_timer(1.0).timeout
 		_on_gold_changed(gold_manager.gold)
-
-func _on_gold_changed(amount):
-	gold_display.text = "Gold: %d" % amount
-
-func _on_mini_selected(mini_data):
-	selected_mini_data = mini_data
-	gold_display.text = "Tap field to deploy %s ($%d)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
-
-func _on_mini_deselected():
-	selected_mini_data.clear()
-	_on_gold_changed(gold_manager.gold)
 
 func spawn_mini(mini_data: Dictionary, position: Vector2, lane: int, team: int):
 	var mini = preload("res://src/units/mini.gd").new()

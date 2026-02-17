@@ -1,15 +1,17 @@
 extends Control
 class_name DeploymentUI
 
-## Player's hand of Minis available to deploy
+## Player's hand of Minis - drag and drop from tray to field
 
-signal mini_selected(mini_data: Dictionary)
-signal mini_deselected()
+signal mini_dropped(mini_data: Dictionary, position: Vector2)
 
 @export var max_hand_size: int = 6
 
 var hand: Array[Dictionary] = []
 var selected_index: int = -1
+var dragging_card: Dictionary = {}
+var dragging = false
+var drag_start_pos = Vector2.ZERO
 
 @onready var hand_container = $HandContainer
 
@@ -18,7 +20,7 @@ func _ready():
 
 func draw_initial_cards():
 	var deck = get_default_deck()
-	for i in range(min(3, deck.size())):
+	for i in range(min(4, deck.size())):
 		add_card(deck[i])
 
 func get_default_deck() -> Array[Dictionary]:
@@ -32,47 +34,72 @@ func get_default_deck() -> Array[Dictionary]:
 func add_card(card_data: Dictionary):
 	hand.append(card_data)
 	
-	# Create a simple button for the card
-	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(70, 90)
-	btn.text = "%s\n$%d" % [card_data.get("name", "?"), card_data.get("cost", 0)]
+	# Create a panel for the card with drag support
+	var panel = Panel.new()
+	panel.custom_minimum_size = Vector2(70, 90)
 	
-	# Connect using callable
-	btn.pressed.connect(_on_card_pressed.bind(hand.size() - 1))
+	# Create label for name and cost
+	var label = Label.new()
+	label.text = "%s\n$%d" % [card_data.get("name", "?"), card_data.get("cost", 0)]
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.position = Vector2(5, 25)
+	label.size = Vector2(60, 40)
+	panel.add_child(label)
 	
-	# Style the button
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.2, 0.2, 0.25, 1)
-	style.corner_radius_top_left = 5
-	style.corner_radius_top_right = 5
-	style.corner_radius_bottom_left = 5
-	style.corner_radius_bottom_right = 5
-	btn.add_theme_stylebox_override("normal", style)
+	# Store card data on the panel
+	panel.set_meta("card_data", card_data)
+	panel.set_meta("card_index", hand.size() - 1)
 	
-	hand_container.add_child(btn)
+	# Connect mouse events for drag
+	panel.gui_input.connect(_on_card_input.bind(hand.size() - 1, card_data))
+	
+	hand_container.add_child(panel)
 
-func _on_card_pressed(index: int):
-	if selected_index == index:
-		# Deselect
-		selected_index = -1
-		mini_deselected.emit()
-	else:
-		# Select
-		selected_index = index
-		mini_selected.emit(hand[index])
-	
-	_update_button_styles()
+func _on_card_input(event, index: int, card_data: Dictionary):
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				# Start drag
+				dragging = true
+				dragging_card = card_data
+				drag_start_pos = event.position
+				print("Started dragging: ", card_data.get("name"))
+			else:
+				# Released - check if it was a drag or click
+				if dragging:
+					dragging = false
+					dragging_card = {}
 
-func _update_button_styles():
-	for i in range(hand_container.get_child_count()):
-		var btn = hand_container.get_child(i)
-		var style_normal = btn.get_theme_stylebox("normal").duplicate()
-		if i == selected_index:
-			style_normal.bg_color = Color(0.5, 0.5, 0.3, 1)  # Gold when selected
-		else:
-			style_normal.bg_color = Color(0.2, 0.2, 0.25, 1)
-		btn.add_theme_stylebox_override("normal", style_normal)
+func _gui_input(event):
+	# Handle drag and drop to field
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed and dragging and not dragging_card.is_empty():
+				# Get global position for drop
+				var global_pos = get_global_mouse_position()
+				print("Dragging to: ", global_pos)
+				
+				# Check if we're in the game field (above this UI)
+				# This UI is at the bottom, so if mouse is above, it's in field
+				if global_pos.y < 854 - 120:  # Above the UI area
+					# Drop the mini!
+					emit_signal("mini_dropped", dragging_card, global_pos)
+					print("Dropped: ", dragging_card.get("name"), " at ", global_pos)
+					dragging = false
+					dragging_card = {}
+	elif event is InputEventMouseMotion and dragging:
+		# Update drag visual if needed
+		pass
 
-func clear_selection():
-	selected_index = -1
-	_update_button_styles()
+func _process(delta):
+	# Handle drag release anywhere
+	if dragging and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		pass
+	elif dragging and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		# Mouse released, check if in drop zone
+		var global_pos = get_global_mouse_position()
+		if global_pos.y < 854 - 120:  # Above UI
+			emit_signal("mini_dropped", dragging_card, global_pos)
+		dragging = false
+		dragging_card = {}
