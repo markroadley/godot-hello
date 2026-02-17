@@ -56,8 +56,11 @@ func _process(delta):
 		else:
 			move_toward_target(target.global_position, delta)
 	else:
-		# Move toward enemy base
-		move_toward_base(delta)
+		# Move toward enemy base - straight down (enemy) or up (player)
+		if team == 1:  # Enemy moves DOWN toward player base at y=820
+			global_position.y += move_speed * delta
+		else:  # Player moves UP toward enemy base at y=30
+			global_position.y -= move_speed * delta
 
 func find_target() -> Node2D:
 	var targets = get_tree().get_nodes_in_group("minis")
@@ -75,8 +78,10 @@ func find_target() -> Node2D:
 	if not nearest:
 		var bases = get_tree().get_nodes_in_group("bases")
 		for b in bases:
-			if b.team != team:
+			if b.team != team and is_instance_valid(b):
 				return b
+	
+	return nearest
 	
 	return nearest
 
