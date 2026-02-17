@@ -67,26 +67,33 @@ func _on_mini_selected(mini_data):
 	gold_display.text = "Tap to deploy %s (%d gold)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
 
 func _on_tap(event):
+	var tap_pos: Vector2
+	
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if selected_mini_data != null:
-			var cost = selected_mini_data.get("cost", 3)
-			if gold_manager.spend(cost):
-				# Determine lane from tap position
-				var tap_pos = event.position
-				var lane = int(tap_pos.x / 160)
-				lane = clamp(lane, 0, 2)
-				
-				# Spawn mini at tap position
-				spawn_mini(selected_mini_data, tap_pos, lane, PLAYER_TEAM)
-				
-				# Clear selection
-				selected_mini_data = null
-				_on_gold_changed(gold_manager.gold)
-			else:
-				# Not enough gold
-				gold_display.text = "Not enough gold!"
-				await get_tree().create_timer(1.0).timeout
-				_on_gold_changed(gold_manager.gold)
+		tap_pos = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		tap_pos = event.position
+	else:
+		return
+	
+	if selected_mini_data != null:
+		var cost = selected_mini_data.get("cost", 3)
+		if gold_manager.spend(cost):
+			# Determine lane from tap position
+			var lane = int(tap_pos.x / 160)
+			lane = clamp(lane, 0, 2)
+			
+			# Spawn mini at tap position
+			spawn_mini(selected_mini_data, tap_pos, lane, PLAYER_TEAM)
+			
+			# Clear selection
+			selected_mini_data = null
+			_on_gold_changed(gold_manager.gold)
+		else:
+			# Not enough gold
+			gold_display.text = "Not enough gold!"
+			await get_tree().create_timer(1.0).timeout
+			_on_gold_changed(gold_manager.gold)
 
 func spawn_mini(mini_data: Dictionary, position: Vector2, lane: int, team: int):
 	var mini = preload("res://src/units/mini.gd").new()

@@ -4,19 +4,18 @@ class_name DeploymentUI
 ## Player's hand of Minis available to deploy
 
 signal mini_selected(mini_data: Dictionary)
-signal deployment_zone_entered(lane: int)
 
 @export var max_hand_size: int = 6
 @export var card_spacing: int = 70
-@export var deck: Array[Dictionary] = []  # Array of mini data dicts
+@export var deck: Array[Dictionary] = []
 
 var hand: Array[Dictionary] = []
 var selected_index: int = -1
 
 @onready var card_scene = preload("res://scenes/deployment_card.tscn")
+@onready var hand_container = $HandContainer
 
 func _ready():
-	# Initialize with starting deck
 	if deck.is_empty():
 		deck = get_default_deck()
 	draw_cards(3)
@@ -36,28 +35,31 @@ func draw_cards(count: int):
 			hand.append(card_data)
 			create_card_ui(card_data, hand.size() - 1)
 	
-	# Cycle deck if empty
 	if deck.is_empty():
 		deck = get_default_deck()
 
 func create_card_ui(card_data: Dictionary, index: int):
 	var card = card_scene.instantiate()
-	$HandContainer.add_child(card)
+	hand_container.add_child(card)
 	card.setup(card_data)
-	card.position.x = index_spacing + * card 20
+	card.position.x = index * 80 + 10
 	
-	# Random rotation for hand fan effect
-	card.rotation = (index - hand.size() / 2.0) * 0.05
+	# Connect input
+	card.gui_input.connect(_on_card_input.bind(index))
 
-func _on_card_clicked(index: int):
+func _on_card_input(event, card_index: int):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_select_card(card_index)
+	elif event is InputEventScreenTouch and event.pressed:
+		_select_card(card_index)
+
+func _select_card(index: int):
 	if selected_index == index:
-		# Deselect
 		selected_index = -1
-		get_child(selected_index).set_selected(false)
+		hand_container.get_child(index).set_selected(false)
 	else:
-		# Select new
-		if selected_index >= 0:
-			$HandContainer.get_child(selected_index).set_selected(false)
+		if selected_index >= 0 and selected_index < hand_container.get_child_count():
+			hand_container.get_child(selected_index).set_selected(false)
 		selected_index = index
-		$HandContainer.get_child(index).set_selected(true)
+		hand_container.get_child(index).set_selected(true)
 		mini_selected.emit(hand[index])
