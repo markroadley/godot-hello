@@ -4,21 +4,22 @@ class_name DeploymentUI
 ## Player's hand of Minis available to deploy
 
 signal mini_selected(mini_data: Dictionary)
+signal mini_deselected()
 
 @export var max_hand_size: int = 6
-@export var card_spacing: int = 70
-@export var deck: Array[Dictionary] = []
 
 var hand: Array[Dictionary] = []
 var selected_index: int = -1
 
-@onready var card_scene = preload("res://scenes/deployment_card.tscn")
 @onready var hand_container = $HandContainer
 
 func _ready():
-	if deck.is_empty():
-		deck = get_default_deck()
-	draw_cards(3)
+	draw_initial_cards()
+
+func draw_initial_cards():
+	var deck = get_default_deck()
+	for i in range(min(3, deck.size())):
+		add_card(deck[i])
 
 func get_default_deck() -> Array[Dictionary]:
 	return [
@@ -28,38 +29,64 @@ func get_default_deck() -> Array[Dictionary]:
 		{"id": "tank", "name": "Tank", "cost": 5, "hp": 200, "damage": 8, "speed": 25, "range": 20, "attack_speed": 0.6, "color": Color(0.6, 0.4, 0.2)},
 	]
 
-func draw_cards(count: int):
-	for i in range(count):
-		if hand.size() < max_hand_size and not deck.is_empty():
-			var card_data = deck.pop_front()
-			hand.append(card_data)
-			create_card_ui(card_data, hand.size() - 1)
+func add_card(card_data: Dictionary):
+	hand.append(card_data)
 	
-	if deck.is_empty():
-		deck = get_default_deck()
-
-func create_card_ui(card_data: Dictionary, index: int):
-	var card = card_scene.instantiate()
-	hand_container.add_child(card)
-	card.setup(card_data)
-	card.position.x = index * 80 + 10
+	# Create a simple button for the card
+	var btn = Button.new()
+	btn.custom_minimum_size = Vector2(70, 90)
+	btn.text = "%s\n$%d" % [card_data.get("name", "?"), card_data.get("cost", 0)]
+	btn.pressed.connect(_on_card_pressed.bind(hand.size() - 1))
 	
-	# Connect input
-	card.gui_input.connect(_on_card_input.bind(index))
+	# Style the button
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.2, 0.25, 1)
+	style.corner_radius_top_left = 5
+	style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5
+	style.corner_radius_bottom_right = 5
+	btn.add_theme_stylebox_override("normal", style)
+	
+	var style_hover = StyleBoxFlat.new()
+	style_hover.bg_color = Color(0.3, 0.3, 0.35, 1)
+	style_hover.corner_radius_top_left = 5
+	style_hover.corner_radius_top_right = 5
+	style_hover.corner_radius_bottom_left = 5
+	style_hover.corner_radius_bottom_right = 5
+	btn.add_theme_stylebox_override("hover", style_hover)
+	
+	var style_pressed = StyleBoxFlat.new()
+	style_pressed.bg_color = Color(0.5, 0.5, 0.3, 1)
+	style_pressed.corner_radius_top_left = 5
+	style_pressed.corner_radius_top_right = 5
+	style_pressed.corner_radius_bottom_left = 5
+	style_pressed.corner_radius_bottom_right = 5
+	btn.add_theme_stylebox_override("pressed", style_pressed)
+	
+	hand_container.add_child(btn)
 
-func _on_card_input(event, card_index: int):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_select_card(card_index)
-	elif event is InputEventScreenTouch and event.pressed:
-		_select_card(card_index)
-
-func _select_card(index: int):
+func _on_card_pressed(index: int):
 	if selected_index == index:
+		# Deselect
 		selected_index = -1
-		hand_container.get_child(index).set_selected(false)
+		mini_deselected.emit()
 	else:
-		if selected_index >= 0 and selected_index < hand_container.get_child_count():
-			hand_container.get_child(selected_index).set_selected(false)
+		# Select
 		selected_index = index
-		hand_container.get_child(index).set_selected(true)
 		mini_selected.emit(hand[index])
+	
+	_update_button_styles()
+
+func _update_button_styles():
+	for i in range(hand_container.get_child_count()):
+		var btn = hand_container.get_child(i)
+		var style_normal = btn.get_theme_stylebox("normal").duplicate()
+		if i == selected_index:
+			style_normal.bg_color = Color(0.5, 0.5, 0.3, 1)  # Gold when selected
+		else:
+			style_normal.bg_color = Color(0.2, 0.2, 0.25, 1)
+		btn.add_theme_stylebox_override("normal", style_normal)
+
+func clear_selection():
+	selected_index = -1
+	_update_button_styles()

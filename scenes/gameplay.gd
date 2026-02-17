@@ -28,6 +28,7 @@ func _ready():
 	# Connect signals
 	gold_manager.gold_changed.connect(_on_gold_changed)
 	deployment_ui.mini_selected.connect(_on_mini_selected)
+	deployment_ui.mini_deselected.connect(_on_mini_deselected)
 	
 	# Add bases to groups
 	enemy_base.add_to_group("bases")
@@ -64,7 +65,11 @@ func _on_gold_changed(amount):
 
 func _on_mini_selected(mini_data):
 	selected_mini_data = mini_data
-	gold_display.text = "Tap to deploy %s (%d gold)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
+	gold_display.text = "Tap to deploy %s ($%d)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
+
+func _on_mini_deselected():
+	selected_mini_data = null
+	_on_gold_changed(gold_manager.gold)
 
 func _on_tap(event):
 	var tap_pos: Vector2
