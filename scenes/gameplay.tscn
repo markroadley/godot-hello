@@ -149,6 +149,16 @@ theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 28
 text = "Gold: 5"
 
+[node name="TapArea" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -120.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="DeploymentUI" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 7
@@ -175,13 +185,3 @@ grow_horizontal = 2
 alignment = 1
 
 [node name="Minis" type="Node" parent="." groups=["minis"]]
-
-[node name="TapDetector" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_bottom = -120.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2

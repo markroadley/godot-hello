@@ -41,7 +41,11 @@ func _ready():
 	# Initial gold display
 	_on_gold_changed(gold_manager.gold)
 	
+	# Connect tap area for input
+	$TapArea.gui_input.connect(_on_tap_area_input)
+	
 	print("GameManager ready!")
+	print("Viewport size: ", get_viewport().get_visible_rect().size)
 
 func _process(delta):
 	if is_game_over:
@@ -59,14 +63,34 @@ func _process(delta):
 		return
 
 func _input(event):
-	# Handle both mouse and touch
+	# For HTML5, mouse and touch are often merged
+	# Check for any press event
+	if event is InputEventMouseButton or event is InputEventScreenTouch:
+		var is_pressed = false
+		var pos = Vector2.ZERO
+		
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				is_pressed = event.pressed
+				pos = event.position
+		elif event is InputEventScreenTouch:
+			is_pressed = event.pressed
+			pos = event.position
+		
+		if is_pressed and pos != Vector2.ZERO:
+			print("Input event at: ", pos)
+			_handle_tap(pos)
+
+func _on_tap_area_input(event):
+	# Alternative input via gui_input on Control node
+	print("TapArea received: ", event)
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			print("Mouse click at: ", event.position)
+			print("TapArea mouse click: ", event.position)
 			_handle_tap(event.position)
 	elif event is InputEventScreenTouch:
 		if event.pressed:
-			print("Touch at: ", event.position)
+			print("TapArea touch: ", event.position)
 			_handle_tap(event.position)
 
 func _handle_tap(screen_pos: Vector2):
