@@ -1,18 +1,25 @@
-extends Node2D
+extends Control
 
 var score := 0
 var time_left := 10.0
 
+func _ready():
+	$CenterContainer/VBox/Timer.text = "Time: %.1f" % time_left
+	$CenterContainer/VBox/Score.text = "Score: %d" % score
+
 func _process(delta):
 	time_left -= delta
-	$UI/Timer.text = "Time: %.1f" % time_left
-	$UI/Score.text = "Score: %d" % score
+	$CenterContainer/VBox/Timer.text = "Time: %.1f" % time_left
+	$CenterContainer/VBox/Score.text = "Score: %d" % score
 	
 	if time_left <= 0:
 		get_tree().change_scene_to_file("res://game_over.tscn")
 
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		score += 1
+		spawn_click_effect(event.position)
+	elif event is InputEventScreenTouch and event.pressed:
 		score += 1
 		spawn_click_effect(event.position)
 

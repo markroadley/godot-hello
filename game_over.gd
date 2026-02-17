@@ -1,4 +1,4 @@
-extends Node2D
+extends Control
 
 var final_score := 0
 
@@ -7,9 +7,9 @@ func _ready():
 	if game_scene.has_method("get_score"):
 		final_score = game_scene.get("score")
 	
-	$UI/FinalScore.text = "Score: %d" % final_score
-	$RestartButton.pressed.connect(_on_restart_pressed)
-	$MenuButton.pressed.connect(_on_menu_pressed)
+	$CenterContainer/VBox/FinalScore.text = "Score: %d" % final_score
+	$CenterContainer/VBox/RestartButton.pressed.connect(_on_restart_pressed)
+	$CenterContainer/VBox/MenuButton.pressed.connect(_on_menu_pressed)
 
 func _on_restart_pressed():
 	get_tree().change_scene_to_file("res://game.tscn")
