@@ -11,21 +11,38 @@ signal game_over(winner: int)
 @onready var minis_container = $Minis
 @onready var player_base = $Bases/PlayerBase
 @onready var enemy_base = $Bases/EnemyBase
+@onready var tap_detector = $TapDetector
 
 var game_time: float = 0.0
 var is_game_over: bool = false
+var selected_mini_data: Dictionary = null
 
 const PLAYER_TEAM = 0
 const ENEMY_TEAM = 1
 
 func _ready():
+	# Setup gold manager
+	gold_manager.gold = 5
+	gold_manager._ready()
+	
+	# Connect signals
 	gold_manager.gold_changed.connect(_on_gold_changed)
 	deployment_ui.mini_selected.connect(_on_mini_selected)
+	
+	# Add bases to groups
 	enemy_base.add_to_group("bases")
 	player_base.add_to_group("bases")
+	enemy_base.base_destroyed.connect(_on_enemy_base_destroyed)
+	player_base.base_destroyed.connect(_on_player_base_destroyed)
+	
+	# Setup tap detection
+	tap_detector.gui_input.connect(_on_tap)
 	
 	# Start enemy AI
 	start_enemy_spawns()
+	
+	# Initial gold display
+	_on_gold_changed(gold_manager.gold)
 
 func _process(delta):
 	if is_game_over:
@@ -33,27 +50,45 @@ func _process(delta):
 	
 	game_time += delta
 	
-	# Update gold display
-	gold_display.text = "Gold: %d" % gold_manager.gold
-	
 	# Check win condition
-	if enemy_base.has_method("get_hp"):
-		if enemy_base.get("current_hp", 1000) <= 0:
-			end_game(PLAYER_TEAM)
+	if enemy_base.get_hp() <= 0:
+		end_game(PLAYER_TEAM)
+		return
 	
-	if player_base.has_method("get_hp"):
-		if player_base.get("current_hp", 1000) <= 0:
-			end_game(ENEMY_TEAM)
+	if player_base.get_hp() <= 0:
+		end_game(ENEMY_TEAM)
+		return
 
 func _on_gold_changed(amount):
 	gold_display.text = "Gold: %d" % amount
 
 func _on_mini_selected(mini_data):
-	# Player has selected a mini to deploy
-	# Next tap on the map will spawn it
-	pass
+	selected_mini_data = mini_data
+	gold_display.text = "Tap to deploy %s (%d gold)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
 
-func spawn_mini(mini_data: Dictionary, lane: int, team: int):
+func _on_tap(event):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if selected_mini_data != null:
+			var cost = selected_mini_data.get("cost", 3)
+			if gold_manager.spend(cost):
+				# Determine lane from tap position
+				var tap_pos = event.position
+				var lane = int(tap_pos.x / 160)
+				lane = clamp(lane, 0, 2)
+				
+				# Spawn mini at tap position
+				spawn_mini(selected_mini_data, tap_pos, lane, PLAYER_TEAM)
+				
+				# Clear selection
+				selected_mini_data = null
+				_on_gold_changed(gold_manager.gold)
+			else:
+				# Not enough gold
+				gold_display.text = "Not enough gold!"
+				await get_tree().create_timer(1.0).timeout
+				_on_gold_changed(gold_manager.gold)
+
+func spawn_mini(mini_data: Dictionary, position: Vector2, lane: int, team: int):
 	var mini = preload("res://src/units/mini.gd").new()
 	
 	mini.max_hp = mini_data.get("hp", 100)
@@ -65,19 +100,24 @@ func spawn_mini(mini_data: Dictionary, lane: int, team: int):
 	mini.team = team
 	mini.lane = lane
 	
-	# Set position based on lane and team
-	var x_pos = 80 if team == PLAYER_TEAM else 400
-	var y_pos = lane * (854.0 / 3.0) + (854.0 / 6.0)
-	mini.position = Vector2(x_pos, y_pos)
+	# Set position
+	mini.position = position
 	
 	minis_container.add_child(mini)
 	mini.add_to_group("minis")
 	
 	return mini
 
+func _on_enemy_base_destroyed(team):
+	end_game(PLAYER_TEAM)
+
+func _on_player_base_destroyed(team):
+	end_game(ENEMY_TEAM)
+
 func end_game(winner: int):
 	is_game_over = true
 	game_over.emit(winner)
+	print("Game Over! Winner: ", winner)
 
 # Simple enemy AI
 func start_enemy_spawns():
@@ -87,11 +127,16 @@ func start_enemy_spawns():
 	]
 	
 	while not is_game_over:
-		await get_tree().create_timer(5.0).timeout
+		await get_tree().create_timer(randf_range(3.0, 6.0)).timeout
 		if is_game_over:
 			break
 		
 		# Random spawn
 		var card = enemy_deck.pick_random()
 		var lane = randi() % 3
-		spawn_mini(card, lane, ENEMY_TEAM)
+		
+		# Spawn at top of lane
+		var x_pos = 80 + lane * 160 + 80
+		var spawn_pos = Vector2(x_pos, 60)
+		
+		spawn_mini(card, spawn_pos, lane, ENEMY_TEAM)

@@ -8,17 +8,29 @@ signal gold_spent(amount: int)
 
 @export var team: int = 0  # 0 = player, 1 = enemy
 @export var starting_gold: int = 5
-@export var gold_per_tick: float = 1.0  # Gold per second
-@export var tick_interval: float = 1.0  # Seconds between ticks
+@export var gold_per_tick: float = 1.0
+@export var tick_interval: float = 1.0
 
 var gold: int = 0
 var _timer: float = 0.0
+var _initialized: bool = false
 
 func _ready():
+	# Don't call _ready logic here - it may be called from parent
+	pass
+
+func initialize():
+	if _initialized:
+		return
 	gold = starting_gold
+	_initialized = true
 	gold_changed.emit(gold)
 
 func _process(delta):
+	if not _initialized:
+		initialize()
+		return
+		
 	_timer += delta
 	if _timer >= tick_interval:
 		_timer -= tick_interval
