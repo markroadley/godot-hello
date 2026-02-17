@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=3 uid="uid://card"]
+
+[sub_resource type="RectangleShape2D" id="R1"]
+size = Vector2(60, 80)
+
+[node name="DeploymentCard" type="ColorRect"]
+offset_right = 60.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.25, 1)
+
+[node name="Cost" type="Label" parent="."]
+offset_left = 5.0
+offset_top = 5.0
+offset_right = 20.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_font_sizes/font_size = 16
+text = "3"
+
+[node name="Name" type="Label" parent="."]
+offset_left = 5.0
+offset_top = 25.0
+offset_right = 55.0
+offset_bottom = 40.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Knight"
+horizontal_alignment = 1
+
+[node name="Icon" type="ColorRect" parent="."]
+offset_left = 15.0
+offset_top = 45.0
+offset_right = 45.0
+offset_bottom = 70.0
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("R1")
