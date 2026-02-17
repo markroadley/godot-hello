@@ -62,24 +62,23 @@ func _input(event):
 	# Handle both mouse and touch
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			print("Mouse click at: ", event.position)
 			_handle_tap(event.position)
 	elif event is InputEventScreenTouch:
 		if event.pressed:
+			print("Touch at: ", event.position)
 			_handle_tap(event.position)
 
 func _handle_tap(screen_pos: Vector2):
-	# Check if tap is in the game area (not on UI)
-	# Game area is top part, UI is bottom 120px
-	var game_height = 854 - 120  # Total height minus UI
-	
-	if screen_pos.y > game_height:
-		# Tap is on UI, ignore
-		return
+	print("Handle tap at: ", screen_pos, " selected: ", selected_mini_data)
 	
 	if selected_mini_data.is_empty():
+		print("No mini selected")
 		return
 	
 	var cost = selected_mini_data.get("cost", 3)
+	print("Cost: ", cost, " gold: ", gold_manager.gold)
+	
 	if gold_manager.spend(cost):
 		# Determine lane from tap position
 		var lane = int(screen_pos.x / 160)

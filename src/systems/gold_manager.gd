@@ -40,6 +40,9 @@ func add_gold(amount: float):
 	var amount_int = int(amount)
 	if amount_int > 0:
 		gold += amount_int
+		# Cap gold at 10
+		if gold > 10:
+			gold = 10
 		gold_changed.emit(gold)
 
 func spend(amount: int) -> bool:
