@@ -36,6 +36,8 @@ func add_card(card_data: Dictionary):
 	var btn = Button.new()
 	btn.custom_minimum_size = Vector2(70, 90)
 	btn.text = "%s\n$%d" % [card_data.get("name", "?"), card_data.get("cost", 0)]
+	
+	# Connect using callable
 	btn.pressed.connect(_on_card_pressed.bind(hand.size() - 1))
 	
 	# Style the button
@@ -46,22 +48,6 @@ func add_card(card_data: Dictionary):
 	style.corner_radius_bottom_left = 5
 	style.corner_radius_bottom_right = 5
 	btn.add_theme_stylebox_override("normal", style)
-	
-	var style_hover = StyleBoxFlat.new()
-	style_hover.bg_color = Color(0.3, 0.3, 0.35, 1)
-	style_hover.corner_radius_top_left = 5
-	style_hover.corner_radius_top_right = 5
-	style_hover.corner_radius_bottom_left = 5
-	style_hover.corner_radius_bottom_right = 5
-	btn.add_theme_stylebox_override("hover", style_hover)
-	
-	var style_pressed = StyleBoxFlat.new()
-	style_pressed.bg_color = Color(0.5, 0.5, 0.3, 1)
-	style_pressed.corner_radius_top_left = 5
-	style_pressed.corner_radius_top_right = 5
-	style_pressed.corner_radius_bottom_left = 5
-	style_pressed.corner_radius_bottom_right = 5
-	btn.add_theme_stylebox_override("pressed", style_pressed)
 	
 	hand_container.add_child(btn)
 
