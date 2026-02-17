@@ -16,6 +16,7 @@ var drag_start_pos = Vector2.ZERO
 @onready var hand_container = $HandContainer
 
 func _ready():
+	print("DeploymentUI _ready called")
 	draw_initial_cards()
 
 func draw_initial_cards():
