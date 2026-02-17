@@ -54,7 +54,7 @@ func _process(delta):
 		if dist <= range_:
 			attack()
 		else:
-			move_toward(target.global_position, delta)
+			move_toward_target(target.global_position, delta)
 	else:
 		# Move toward enemy base
 		move_toward_base(delta)
@@ -80,7 +80,7 @@ func find_target() -> Node2D:
 	
 	return nearest
 
-func move_toward(pos: Vector2, delta: float):
+func move_toward_target(pos: Vector2, delta: float):
 	var dir = (pos - global_position).normalized()
 	global_position += dir * move_speed * delta
 

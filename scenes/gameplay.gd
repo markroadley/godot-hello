@@ -15,7 +15,7 @@ signal game_over(winner: int)
 
 var game_time: float = 0.0
 var is_game_over: bool = false
-var selected_mini_data: Dictionary = null
+var selected_mini_data: Dictionary = {}
 
 const PLAYER_TEAM = 0
 const ENEMY_TEAM = 1
@@ -68,7 +68,7 @@ func _on_mini_selected(mini_data):
 	gold_display.text = "Tap to deploy %s ($%d)" % [mini_data.get("name", "Unit"), mini_data.get("cost", 3)]
 
 func _on_mini_deselected():
-	selected_mini_data = null
+	selected_mini_data.clear()
 	_on_gold_changed(gold_manager.gold)
 
 func _on_tap(event):
@@ -81,24 +81,26 @@ func _on_tap(event):
 	else:
 		return
 	
-	if selected_mini_data != null:
-		var cost = selected_mini_data.get("cost", 3)
-		if gold_manager.spend(cost):
-			# Determine lane from tap position
-			var lane = int(tap_pos.x / 160)
-			lane = clamp(lane, 0, 2)
-			
-			# Spawn mini at tap position
-			spawn_mini(selected_mini_data, tap_pos, lane, PLAYER_TEAM)
-			
-			# Clear selection
-			selected_mini_data = null
-			_on_gold_changed(gold_manager.gold)
-		else:
-			# Not enough gold
-			gold_display.text = "Not enough gold!"
-			await get_tree().create_timer(1.0).timeout
-			_on_gold_changed(gold_manager.gold)
+	if selected_mini_data.is_empty():
+		return
+	
+	var cost = selected_mini_data.get("cost", 3)
+	if gold_manager.spend(cost):
+		# Determine lane from tap position
+		var lane = int(tap_pos.x / 160)
+		lane = clamp(lane, 0, 2)
+		
+		# Spawn mini at tap position
+		spawn_mini(selected_mini_data, tap_pos, lane, PLAYER_TEAM)
+		
+		# Clear selection
+		selected_mini_data.clear()
+		_on_gold_changed(gold_manager.gold)
+	else:
+		# Not enough gold
+		gold_display.text = "Not enough gold!"
+		await get_tree().create_timer(1.0).timeout
+		_on_gold_changed(gold_manager.gold)
 
 func spawn_mini(mini_data: Dictionary, position: Vector2, lane: int, team: int):
 	var mini = preload("res://src/units/mini.gd").new()
