@@ -1,0 +1,14 @@
+# Godot
+.godot/
+*.import
+
+# Export
+export/
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+build/

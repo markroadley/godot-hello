@@ -1,7 +1,11 @@
 extends Node2D
 
-var time := 0.0
+func _ready():
+	$StartButton.pressed.connect(_on_start_pressed)
+	$QuitButton.pressed.connect(_on_quit_pressed)
 
-func _process(delta):
-	time += delta
-	$Label.scale = Vector2.ONE * (1.0 + sin(time * 2.0) * 0.1)
+func _on_start_pressed():
+	get_tree().change_scene_to_file("res://game.tscn")
+
+func _on_quit_pressed():
+	get_tree().quit()
