@@ -116,14 +116,15 @@ func _create_card_button(card_data: Dictionary, index: int) -> Button:
 	return btn
 
 func _on_card_pressed(index: int, card_data: Dictionary):
+	print("Button pressed! index=", index, " card=", card_data.get("name"))
 	selected_mini_data = card_data
 	
 	# Try to spawn directly - for now spawn in middle lane at bottom
 	var cost = card_data.get("cost", 3)
 	
 	if gold_manager.spend(cost):
-		# Spawn in lane 1 (middle) at position near player's base
-		var spawn_pos = Vector2(240, 700)  # Near bottom
+		# Spawn in lane 1 (middle) near player's deployment zone
+		var spawn_pos = Vector2(240, 550)  # In playable area above tray
 		spawn_mini(card_data, spawn_pos, 1, PLAYER_TEAM)
 		_on_gold_changed(gold_manager.gold)
 		gold_display.text = "Deployed %s!" % card_data.get("name", "Unit")
