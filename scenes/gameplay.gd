@@ -14,7 +14,16 @@ signal game_over(winner: int)
 
 var game_time: float = 0.0
 var is_game_over: bool = false
-var selected_mini_data: Dictionary = {}
+## Drag-Drop System
+var is_dragging: bool = false
+var drag_position: Vector2 = Vector2.ZERO
+var ghost_preview: Sprite2D = null
+var deployment_zone: ColorRect = null
+var selected_card_index: int = -1
+
+# Deployment zone config (y-position where valid drop ends)
+const TRAY_HEIGHT = 120
+const DEPLOY_ZONE_TOP = 400  # How far up the deployment zone extends
 
 # UI Elements
 var tray_panel: Panel
@@ -116,26 +125,29 @@ func _create_card_button(card_data: Dictionary, index: int) -> Button:
 	return btn
 
 func _on_card_pressed(index: int, card_data: Dictionary):
-	print("Button pressed! index=", index, " card=", card_data.get("name"))
-	selected_mini_data = card_data
-	
-	# Try to spawn directly - for now spawn in middle lane at bottom
 	var cost = card_data.get("cost", 3)
 	
-	if gold_manager.spend(cost):
-		# Spawn in lane 1 (middle) near player's deployment zone
-		var spawn_pos = Vector2(240, 550)  # In playable area above tray
-		spawn_mini(card_data, spawn_pos, 1, PLAYER_TEAM)
-		_on_gold_changed(gold_manager.gold)
-		gold_display.text = "Deployed %s!" % card_data.get("name", "Unit")
-		await get_tree().create_timer(0.5).timeout
-		_on_gold_changed(gold_manager.gold)
-	else:
+	# Check if player has enough gold
+	if gold_manager.gold < cost:
 		gold_display.text = "Need $%d more!" % (cost - gold_manager.gold)
 		await get_tree().create_timer(1.0).timeout
 		_on_gold_changed(gold_manager.gold)
+		return
 	
-	# Highlight selected
+	# Enter drag mode - don't spawn yet
+	selected_mini_data = card_data
+	selected_card_index = index
+	is_dragging = true
+	
+	gold_display.text = "Drag to deploy"
+	
+	# Create ghost preview
+	_create_ghost_preview(card_data)
+	
+	# Show deployment zone
+	_create_deployment_zone()
+	
+	# Highlight selected card
 	for i in range(hand_buttons.size()):
 		var btn = hand_buttons[i]
 		var style = btn.get_theme_stylebox("normal").duplicate()
@@ -145,43 +157,139 @@ func _on_card_pressed(index: int, card_data: Dictionary):
 			style.bg_color = Color(0.2, 0.2, 0.25, 1)
 		btn.add_theme_stylebox_override("normal", style)
 	
-	print("Card pressed: ", card_data.get("name"))
+	print("Started dragging: ", card_data.get("name"))
+
+func _create_ghost_preview(card_data: Dictionary):
+	# Remove existing ghost
+	if ghost_preview:
+		ghost_preview.queue_free()
+	
+	# Create ghost sprite
+	ghost_preview = Sprite2D.new()
+	var color = card_data.get("color", Color.CYAN)
+	
+	# Create a simple circle texture
+	var img = Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))  # Transparent
+	var center = Vector2(32, 32)
+	for x in range(64):
+		for y in range(64):
+			var dist = Vector2(x, y).distance_to(center)
+			if dist < 28:
+				img.set_pixel(x, y, color)
+	
+	var tex = ImageTexture.create_from_image(img)
+	ghost_preview.texture = tex
+	ghost_preview.modulate.a = 0.7
+	ghost_preview.scale = Vector2(0.8, 0.8)
+	game_layer.add_child(ghost_preview)
+	ghost_preview.visible = false
+
+func _create_deployment_zone():
+	# Remove existing zone
+	if deployment_zone:
+		deployment_zone.queue_free()
+	
+	# Create deployment zone (blue rectangle showing valid drop area)
+	deployment_zone = ColorRect.new()
+	deployment_zone.color = Color(0.2, 0.4, 1.0, 0.3)  # Semi-transparent blue
+	deployment_zone.position = Vector2(0, DEPLOY_ZONE_TOP)
+	deployment_zone.size = Vector2(480, 854 - TRAY_HEIGHT - DEPLOY_ZONE_TOP)
+	game_layer.add_child(deployment_zone)
+	deployment_zone.visible = false
 
 func _input(event):
-	# Handle tap/drop - add debug
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			if not event.pressed and not selected_mini_data.is_empty():
-				print("Mouse release at: ", event.position, " selected: ", selected_mini_data.get("name"))
-				_handle_drop(event.position)
-	elif event is InputEventScreenTouch:
-		if not event.pressed and not selected_mini_data.is_empty():
-			print("Touch release at: ", event.position, " selected: ", selected_mini_data.get("name"))
-			_handle_drop(event.position)
+	if is_dragging:
+		# Cancel drag with escape or right-click
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_end_drag()
+			gold_display.text = "Cancelled"
+			return
+		
+		# Track drag position
+		if event is InputEventMouseMotion:
+			drag_position = event.position
+			_update_ghost_position(drag_position)
+		elif event is InputEventScreenTouch:
+			if event.position != Vector2.ZERO:
+				drag_position = event.position
+				_update_ghost_position(drag_position)
+		
+		# Handle release - drop the unit
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+				_handle_drop(drag_position)
+		elif event is InputEventScreenTouch:
+			if not event.pressed:
+				_handle_drop(drag_position)
+
+func _update_ghost_position(screen_pos: Vector2):
+	if ghost_preview and deployment_zone:
+		var in_zone = _is_valid_drop_position(screen_pos)
+		ghost_preview.visible = true
+		ghost_preview.position = screen_pos
+		
+		# Change color based on valid/invalid
+		if in_zone:
+			ghost_preview.modulate = Color(0.3, 1.0, 0.3, 0.7)  # Green = valid
+		else:
+			ghost_preview.modulate = Color(1.0, 0.3, 0.3, 0.7)  # Red = invalid
+
+func _is_valid_drop_position(screen_pos: Vector2) -> bool:
+	# Must be above tray
+	if screen_pos.y > 854 - TRAY_HEIGHT:
+		return false
+	# Must be in deployment zone (below the top line)
+	if screen_pos.y < DEPLOY_ZONE_TOP:
+		return false
+	# Must have enough gold
+	var cost = selected_mini_data.get("cost", 3)
+	if gold_manager.gold < cost:
+		return false
+	return true
 
 func _handle_drop(screen_pos: Vector2):
-	# Check if drop is in game area (above tray)
-	if screen_pos.y < 734:  # Above tray
+	if not is_dragging:
+		return
+	
+	# Check if valid drop position
+	if _is_valid_drop_position(screen_pos):
 		var cost = selected_mini_data.get("cost", 3)
 		if gold_manager.spend(cost):
-			var lane = int(screen_pos.x / 160)
-			lane = clamp(lane, 0, 2)
-			spawn_mini(selected_mini_data, screen_pos, lane, PLAYER_TEAM)
+			# Spawn at drop position
+			spawn_mini(selected_mini_data, screen_pos, 0, PLAYER_TEAM)
 			_on_gold_changed(gold_manager.gold)
-			gold_display.text = "Deployed!"
-			await get_tree().create_timer(0.5).timeout
-			_on_gold_changed(gold_manager.gold)
+			gold_display.text = "Deployed %s!" % selected_mini_data.get("name", "Unit")
+			print("Dropped unit at: ", screen_pos)
 		else:
-			gold_display.text = "Need $%d more!" % (cost - gold_manager.gold)
-			await get_tree().create_timer(1.0).timeout
-			_on_gold_changed(gold_manager.gold)
+			gold_display.text = "Not enough gold!"
+	else:
+		gold_display.text = "Invalid drop zone!"
+		print("Invalid drop at: ", screen_pos)
 	
-	# Clear selection
+	# End drag mode
+	_end_drag()
+
+func _end_drag():
+	is_dragging = false
 	selected_mini_data = {}
+	selected_card_index = -1
+	
+	# Clean up visuals
+	if ghost_preview:
+		ghost_preview.queue_free()
+		ghost_preview = null
+	if deployment_zone:
+		deployment_zone.queue_free()
+		deployment_zone = null
+	
+	# Reset button highlights
 	for btn in hand_buttons:
 		var style = btn.get_theme_stylebox("normal").duplicate()
 		style.bg_color = Color(0.2, 0.2, 0.25, 1)
 		btn.add_theme_stylebox_override("normal", style)
+	
+	_on_gold_changed(gold_manager.gold)
 
 func _process(delta):
 	if is_game_over:
