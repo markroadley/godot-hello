@@ -1,12 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://gameplay"]
+[gd_scene load_steps=4 format=3 uid="uid://gameplay"]
 
 [ext_resource type="Script" path="res://scenes/gameplay.gd" id="1"]
 [ext_resource type="Script" path="res://src/systems/gold_manager.gd" id="2"]
-[ext_resource type="Script" path="res://src/systems/deployment_ui.gd" id="3"]
 [ext_resource type="Script" path="res://src/units/base.gd" id="4"]
-
-[sub_resource type="RectangleShape2D" id="R1"]
-size = Vector2(160, 280)
 
 [node name="GameManager" type="Node2D"]
 script = ExtResource("1")
@@ -140,6 +136,8 @@ script = ExtResource("2")
 gold_per_tick = 1.0
 tick_interval = 1.0
 
+[node name="GameLayer" type="CanvasLayer" parent="."]
+
 [node name="GoldDisplay" type="Label" parent="."]
 offset_left = 20.0
 offset_top = 10.0
@@ -148,50 +146,5 @@ offset_bottom = 40.0
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 28
 text = "Gold: 5"
-
-[node name="TapArea" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_bottom = -120.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="DeploymentUI" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -120.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-script = ExtResource("3")
-
-[node name="TrayBackground" type="ColorRect" parent="DeploymentUI"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.1, 0.1, 0.15, 1)
-
-[node name="HandContainer" type="HBoxContainer" parent="DeploymentUI"]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -140.0
-offset_top = -40.0
-offset_right = 140.0
-offset_bottom = 40.0
-grow_horizontal = 2
-grow_vertical = 2
-alignment = 1
 
 [node name="Minis" type="Node" parent="." groups=["minis"]]
