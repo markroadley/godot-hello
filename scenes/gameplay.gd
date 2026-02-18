@@ -117,7 +117,22 @@ func _create_card_button(card_data: Dictionary, index: int) -> Button:
 
 func _on_card_pressed(index: int, card_data: Dictionary):
 	selected_mini_data = card_data
-	gold_display.text = "Drag %s to deploy ($%d)" % [card_data.get("name", "?"), card_data.get("cost", 0)]
+	
+	# Try to spawn directly - for now spawn in middle lane at bottom
+	var cost = card_data.get("cost", 3)
+	
+	if gold_manager.spend(cost):
+		# Spawn in lane 1 (middle) at position near player's base
+		var spawn_pos = Vector2(240, 700)  # Near bottom
+		spawn_mini(card_data, spawn_pos, 1, PLAYER_TEAM)
+		_on_gold_changed(gold_manager.gold)
+		gold_display.text = "Deployed %s!" % card_data.get("name", "Unit")
+		await get_tree().create_timer(0.5).timeout
+		_on_gold_changed(gold_manager.gold)
+	else:
+		gold_display.text = "Need $%d more!" % (cost - gold_manager.gold)
+		await get_tree().create_timer(1.0).timeout
+		_on_gold_changed(gold_manager.gold)
 	
 	# Highlight selected
 	for i in range(hand_buttons.size()):
@@ -129,17 +144,18 @@ func _on_card_pressed(index: int, card_data: Dictionary):
 			style.bg_color = Color(0.2, 0.2, 0.25, 1)
 		btn.add_theme_stylebox_override("normal", style)
 	
-	# Connect to input for dragging
-	print("Card selected: ", card_data.get("name"))
+	print("Card pressed: ", card_data.get("name"))
 
 func _input(event):
-	# Handle drop
+	# Handle tap/drop - add debug
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-			if not selected_mini_data.is_empty():
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if not event.pressed and not selected_mini_data.is_empty():
+				print("Mouse release at: ", event.position, " selected: ", selected_mini_data.get("name"))
 				_handle_drop(event.position)
 	elif event is InputEventScreenTouch:
-		if event.pressed == false and not selected_mini_data.is_empty():
+		if not event.pressed and not selected_mini_data.is_empty():
+			print("Touch release at: ", event.position, " selected: ", selected_mini_data.get("name"))
 			_handle_drop(event.position)
 
 func _handle_drop(screen_pos: Vector2):
