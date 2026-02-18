@@ -57,7 +57,18 @@ func _ready():
 	# Initial gold display
 	_on_gold_changed(gold_manager.gold)
 	
+	# Show version
+	_create_version_display()
+	
 	print("GameManager ready!")
+
+func _create_version_display():
+	var version = Label.new()
+	version.text = "v0.1.2"
+	version.position = Vector2(400, 10)
+	version.add_theme_font_size_override("font_size", 16)
+	version.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
+	game_layer.add_child(version)
 
 func _create_tray_ui():
 	print("Creating tray UI...")
