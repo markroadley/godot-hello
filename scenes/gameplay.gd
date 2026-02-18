@@ -64,7 +64,7 @@ func _ready():
 
 func _create_version_display():
 	var version = Label.new()
-	version.text = "v0.1.2"
+	version.text = "v0.1.3"
 	version.position = Vector2(400, 10)
 	version.add_theme_font_size_override("font_size", 16)
 	version.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
@@ -77,7 +77,11 @@ func _create_tray_ui():
 	# Position at bottom of screen - use explicit position, not anchors
 	tray_panel.position = Vector2(0, 734)  # Bottom of 854 height
 	tray_panel.size = Vector2(480, 120)
-	tray_panel.color = Color(0.15, 0.15, 0.2, 1)
+	
+	# Style the tray
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.15, 0.2, 1)
+	tray_panel.add_theme_stylebox_override("panel", style)
 	
 	print("Adding tray to game_layer...")
 	game_layer.add_child(tray_panel)
