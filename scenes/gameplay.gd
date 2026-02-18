@@ -51,27 +51,26 @@ func _ready():
 	print("GameManager ready!")
 
 func _create_tray_ui():
-	# Create tray panel at bottom - use game_layer for UI
+	print("Creating tray UI...")
+	# Create tray panel at bottom
 	tray_panel = Panel.new()
-	tray_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tray_panel.position = Vector2(0, 734)  # Bottom 120px
+	# Position at bottom of screen - use explicit position, not anchors
+	tray_panel.position = Vector2(0, 734)  # Bottom of 854 height
 	tray_panel.size = Vector2(480, 120)
+	tray_panel.color = Color(0.15, 0.15, 0.2, 1)
 	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.15, 0.15, 0.2, 1)
-	tray_panel.add_theme_stylebox_override("panel", style)
-	
+	print("Adding tray to game_layer...")
 	game_layer.add_child(tray_panel)
+	print("Tray added to game_layer")
 	
-	# Create hand container
+	# Create hand container with explicit positioning
 	hand_container = HBoxContainer.new()
-	hand_container.set_anchors_preset(Control.PRESET_CENTER)
-	hand_container.position = Vector2(240, 60)
-	hand_container.size = Vector2(440, 100)
+	hand_container.position = Vector2(40, 20)  # Offset within tray
+	hand_container.size = Vector2(400, 80)
 	hand_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	hand_container.position -= Vector2(220, 50)  # Center it
 	
 	tray_panel.add_child(hand_container)
+	print("Hand container created")
 	
 	# Create deck
 	deck = [
@@ -82,11 +81,14 @@ func _create_tray_ui():
 	]
 	
 	# Create buttons for each card
+	print("Creating ", deck.size(), " card buttons")
 	for i in range(deck.size()):
 		var card_data = deck[i]
 		var btn = _create_card_button(card_data, i)
 		hand_container.add_child(btn)
 		hand_buttons.append(btn)
+	
+	print("Tray UI creation complete!")
 
 func _create_card_button(card_data: Dictionary, index: int) -> Button:
 	var btn = Button.new()
